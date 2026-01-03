@@ -1,0 +1,17 @@
+# Ciello ngrok tunnel config
+#
+# Usage:
+#   ngrok http 3001
+#
+# Or with this config file:
+#   ngrok start --all --config <your-ngrok-config> --config ngrok.yml
+#
+# The MCP server runs on port 3001. Widgets are self-contained HTML
+# served directly by the MCP server, so only one tunnel is needed.
+
+version: "2"
+
+tunnels:
+  mcp:
+    proto: http
+    addr: 3001

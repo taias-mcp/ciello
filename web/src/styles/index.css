@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "@openai/apps-sdk-ui/css";
+/* Required for Tailwind to find class references in Apps SDK UI components. */
+@source "../node_modules/@openai/apps-sdk-ui";
+
+/* Custom styles for Ciello */
+body {
+  background-color: var(--color-surface);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Board card styling */
+.board-card {
+  background-color: var(--color-surface);
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transition: box-shadow 150ms ease;
+}
+
+.board-card:hover {
+  box-shadow: var(--shadow-xl);
+}
+
+/* Task card styling */
+.task-card {
+  background-color: var(--color-surface);
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding: 0.75rem;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.task-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* Column styling */
+.task-column {
+  background-color: var(--color-surface-secondary);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  min-height: 8rem;
+}
