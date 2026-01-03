@@ -164,7 +164,9 @@ When the user clicks a button that triggers a tool call:
 
 ### Key Insight: No New Widget
 
-Unlike the initial tool call (where ChatGPT renders a new widget), `callTool()` from within a widget **does not render a new widget**. Instead:
+Unlike the initial tool call (where ChatGPT renders a new widget), `callTool()` updates data within the current widget instance. Switching to a different widget template generally requires a new host turn (e.g., via `sendFollowUpMessage` leading to another tool call).
+
+When using `callTool()`:
 
 1. The response is returned directly to the calling widget
 2. The widget is responsible for updating its own state
@@ -195,7 +197,7 @@ function CielloOnboarding() {
     // Call the appropriate tool for the current step
     const response = await window.openai.callTool(config.tool, params);
     
-    // Update state with response (does NOT render new widget)
+    // Update state with response (stays in current widget)
     setState({
       step: response.structuredContent.currentStep,
       board: response.structuredContent.board ?? state.board,
