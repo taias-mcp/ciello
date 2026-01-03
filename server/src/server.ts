@@ -23,11 +23,9 @@ import {
   handleFinishSetup,
   allToolSchemas
 } from "./tools/index.js";
-import type {
-  SetupBoardInput,
-  CreateFirstTaskInput,
-  ExpandBoardInput
-} from "./lib/types.js";
+import type { SetupBoardInput } from "./tools/setup-board.js";
+import type { CreateFirstTaskInput } from "./tools/create-first-task.js";
+import type { ExpandBoardInput } from "./tools/expand-board.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

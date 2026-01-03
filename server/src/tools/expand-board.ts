@@ -1,15 +1,86 @@
-// Tool: expand_board
-// Adds more tasks and optionally invites a teammate
+/**
+ * Tool: expand_board
+ * 
+ * Adds more tasks to the board and optionally invites a teammate.
+ * This helps the user see their board come to life with real content.
+ * 
+ * Flow: start_onboarding → setup_board → create_first_task → expand_board → finish_setup
+ */
 
 import { supabase } from "../lib/supabase.js";
-import type { ExpandBoardInput, ExpandBoardOutput, MCPToolResponse } from "../lib/types.js";
+import type { OnboardingStep, TaskStatus, InviteStatus, ToolError, MCPToolResponse } from "../lib/types.js";
 
-// Singleton ID for onboarding state - must match start-onboarding.ts
+// ============================================================================
+// Tool Schema (for MCP registration)
+// ============================================================================
+
+export const expandBoardSchema = {
+  name: "expand_board",
+  description:
+    "Expand the board by adding more tasks and optionally inviting a teammate. This helps the user see their board come to life.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      additional_task_titles: {
+        type: "array",
+        items: { type: "string" },
+        description: "Array of task titles to add to the board"
+      },
+      invite_email: {
+        type: "string",
+        description: "Email address of a teammate to invite (simulated)"
+      }
+    },
+    required: []
+  }
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Input parameters from ChatGPT */
+export interface ExpandBoardInput {
+  additional_task_titles?: string[];
+  invite_email?: string;
+}
+
+/** Output returned to ChatGPT and the widget */
+export interface ExpandBoardOutput {
+  message: string;
+  currentStep: OnboardingStep;
+  board: {
+    id: string;
+    name: string;
+  };
+  tasks: Array<{
+    id: string;
+    title: string;
+    status: TaskStatus;
+  }>;
+  invite?: {
+    email: string;
+    status: InviteStatus;
+  };
+  error?: ToolError;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Singleton ID for onboarding state - must match start-onboarding.ts */
 const ONBOARDING_STATE_ID = "11111111-1111-1111-1111-111111111111";
+
+// ============================================================================
+// Handler
+// ============================================================================
 
 /**
  * Handle expand_board tool call
- * Adds additional tasks and/or teammate invite
+ * 
+ * Adds additional tasks and/or teammate invite.
  */
 export async function handleExpandBoard(input: ExpandBoardInput): Promise<MCPToolResponse<ExpandBoardOutput>> {
   const { additional_task_titles = [], invite_email } = input;
@@ -67,7 +138,7 @@ export async function handleExpandBoard(input: ExpandBoardInput): Promise<MCPToo
     }
 
     // Create invite if email provided
-    let inviteResult: { email: string; status: "pending" | "sent" } | undefined;
+    let inviteResult: { email: string; status: InviteStatus } | undefined;
     if (invite_email) {
       const { data: invite, error: inviteError } = await supabase
         .from("invites")
@@ -104,7 +175,7 @@ export async function handleExpandBoard(input: ExpandBoardInput): Promise<MCPToo
     const tasks = (allTasks || []).map(t => ({
       id: t.id,
       title: t.title,
-      status: t.status as "todo" | "doing" | "done"
+      status: t.status as TaskStatus
     }));
 
     // Update onboarding state

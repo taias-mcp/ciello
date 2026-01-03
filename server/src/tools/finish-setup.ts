@@ -1,15 +1,68 @@
-// Tool: finish_setup
-// Completes onboarding and returns a summary
+/**
+ * Tool: finish_setup
+ * 
+ * Completes the onboarding flow and returns a summary of everything created.
+ * This marks the user as fully onboarded.
+ * 
+ * Flow: start_onboarding → setup_board → create_first_task → expand_board → finish_setup
+ */
 
 import { supabase } from "../lib/supabase.js";
-import type { FinishSetupOutput, MCPToolResponse } from "../lib/types.js";
+import type { OnboardingStep, TaskStatus, ToolError, MCPToolResponse } from "../lib/types.js";
 
-// Singleton ID for onboarding state - must match start-onboarding.ts
+// ============================================================================
+// Tool Schema (for MCP registration)
+// ============================================================================
+
+export const finishSetupSchema = {
+  name: "finish_setup",
+  description:
+    "Complete the onboarding flow and show a summary of everything created. This marks the user as fully onboarded.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {},
+    required: []
+  }
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Output returned to ChatGPT and the widget */
+export interface FinishSetupOutput {
+  message: string;
+  currentStep: OnboardingStep;
+  completedAt: string;
+  summary: {
+    boardName: string;
+    boardPurpose: string;
+    taskCount: number;
+    tasks: Array<{
+      title: string;
+      status: TaskStatus;
+    }>;
+    invitedTeammate: string | null;
+  };
+  error?: ToolError;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Singleton ID for onboarding state - must match start-onboarding.ts */
 const ONBOARDING_STATE_ID = "11111111-1111-1111-1111-111111111111";
+
+// ============================================================================
+// Handler
+// ============================================================================
 
 /**
  * Handle finish_setup tool call
- * Marks onboarding complete and returns summary
+ * 
+ * Marks onboarding complete and returns summary.
  */
 export async function handleFinishSetup(): Promise<MCPToolResponse<FinishSetupOutput>> {
   console.log("[finish_setup] Finishing onboarding...");
@@ -54,7 +107,7 @@ export async function handleFinishSetup(): Promise<MCPToolResponse<FinishSetupOu
 
     const taskList = (tasks || []).map(t => ({
       title: t.title,
-      status: t.status as "todo" | "doing" | "done"
+      status: t.status as TaskStatus
     }));
 
     // Get invite if any

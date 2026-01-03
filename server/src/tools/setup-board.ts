@@ -1,16 +1,78 @@
-// Tool: setup_board
-// Creates the user's first board with name and purpose
+/**
+ * Tool: setup_board
+ * 
+ * Creates the user's first board with a name and purpose.
+ * This is the second step of onboarding after start_onboarding.
+ * 
+ * Flow: start_onboarding → setup_board → create_first_task → expand_board → finish_setup
+ */
 
 import { supabase } from "../lib/supabase.js";
-import type { SetupBoardInput, SetupBoardOutput, MCPToolResponse } from "../lib/types.js";
+import type { OnboardingStep, ToolError, MCPToolResponse } from "../lib/types.js";
 
-// Singleton ID for onboarding state - must match start-onboarding.ts
+// ============================================================================
+// Tool Schema (for MCP registration)
+// ============================================================================
+
+export const setupBoardSchema = {
+  name: "setup_board",
+  description:
+    "Create the user's first board with a name and purpose. This is the second step of onboarding after starting.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      board_name: {
+        type: "string",
+        description: "Name for the new board (e.g., 'Marketing Launch', 'Product Roadmap')"
+      },
+      board_purpose: {
+        type: "string",
+        description: "Brief description of what this board will be used for"
+      }
+    },
+    required: ["board_name", "board_purpose"]
+  }
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Input parameters from ChatGPT */
+export interface SetupBoardInput {
+  board_name: string;
+  board_purpose: string;
+}
+
+/** Output returned to ChatGPT and the widget */
+export interface SetupBoardOutput {
+  message: string;
+  currentStep: OnboardingStep;
+  board: {
+    id: string;
+    name: string;
+    purpose: string;
+  };
+  error?: ToolError;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Singleton ID for onboarding state - must match start-onboarding.ts */
 const ONBOARDING_STATE_ID = "11111111-1111-1111-1111-111111111111";
+
+// ============================================================================
+// Handler
+// ============================================================================
 
 /**
  * Handle setup_board tool call
- * Creates a new board and updates onboarding state
- * Validates that onboarding is in the correct state first
+ * 
+ * Creates a new board and updates onboarding state.
+ * Validates that onboarding is in the correct state first.
  */
 export async function handleSetupBoard(input: SetupBoardInput): Promise<MCPToolResponse<SetupBoardOutput>> {
   const { board_name, board_purpose } = input;

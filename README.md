@@ -43,7 +43,7 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key-here
 # Build server
 cd server && npm run build
 
-# Build widgets (self-contained HTML with inlined JS/CSS)
+# Build widget (self-contained HTML with inlined JS/CSS)
 cd ../web && npm run build
 ```
 
@@ -85,22 +85,38 @@ Note the public URL (e.g., `https://abc123.ngrok-free.app`).
 Say: *"Help me set up my first board for tracking our marketing campaign"*
 
 You should see:
-1. `start_onboarding` called → Welcome widget renders
-2. `setup_board` called → Board creation widget with "Add Task" button
-3. User or model progresses through the onboarding flow
-4. Widgets render inline with interactive controls
+1. `start_onboarding` called → Widget renders with "Create Board" form
+2. User fills form, clicks CTA → Widget updates to next step
+3. User progresses through all 5 steps within the same widget
+4. Final step shows completion summary with board preview
+
+---
+
+## Architecture Overview
+
+This demo uses a **unified widget architecture** - a single React widget handles all 5 onboarding steps. Each tool returns data that the widget uses to render the appropriate step.
+
+```
+ChatGPT ←→ MCP Server ←→ Supabase
+              ↓
+         Widget (React)
+```
+
+For a detailed explanation of how data flows between ChatGPT, MCP, and the widget, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 
 ## Onboarding Flow
 
-| Step | Tool | Widget | Description |
-|------|------|--------|-------------|
-| 1 | `start_onboarding` | ciello-start | Welcome message, resets state |
-| 2 | `setup_board` | ciello-board | Create board with name & purpose |
-| 3 | `create_first_task` | ciello-task | Add first task to board |
-| 4 | `expand_board` | ciello-expand | Add more tasks, invite teammate |
-| 5 | `finish_setup` | ciello-complete | Completion summary |
+| Step | Tool | Description |
+|------|------|-------------|
+| 1 | `start_onboarding` | Resets state, shows welcome + board creation form |
+| 2 | `setup_board` | Creates board, shows task creation form |
+| 3 | `create_first_task` | Adds first task, shows expand options |
+| 4 | `expand_board` | Adds more tasks + invites, shows finish option |
+| 5 | `finish_setup` | Marks complete, shows summary |
+
+All 5 tools render the same **ciello-onboarding** widget, which dynamically shows the appropriate UI based on `currentStep` in the tool output.
 
 ---
 
@@ -187,19 +203,25 @@ CREATE TABLE invites (
 
 ```
 ciello/
+├── ARCHITECTURE.md            # Data flow and widget architecture
 ├── ngrok.yml                  # ngrok tunnel config
 ├── server/                    # MCP Server
 │   ├── src/
-│   │   ├── server.ts          # Tool/resource registration
+│   │   ├── server.ts          # Tool/resource registration, widget binding
 │   │   ├── transports/http.ts # StreamableHTTPServerTransport
-│   │   ├── tools/             # 5 onboarding tool handlers
-│   │   └── lib/               # Types, Supabase client
+│   │   ├── tools/             # 5 self-contained tool files
+│   │   │   ├── start-onboarding.ts   # Schema + types + handler
+│   │   │   ├── setup-board.ts
+│   │   │   ├── create-first-task.ts
+│   │   │   ├── expand-board.ts
+│   │   │   └── finish-setup.ts
+│   │   └── lib/               # Shared types, Supabase client
 │   └── package.json
 │
 └── web/                       # Widget Frontend
     ├── src/
-    │   ├── widgets/           # 5 widget entry points
-    │   ├── components/        # Shared React components
+    │   ├── widgets/
+    │   │   └── ciello-onboarding/    # Unified widget (handles all steps)
     │   ├── hooks/             # window.openai hooks
     │   └── types/             # TypeScript definitions
     ├── assets/                # Build output (gitignored)
@@ -207,30 +229,61 @@ ciello/
     └── package.json
 ```
 
-### Widget Development
+### Tool Structure
 
-Each widget is an independent React entry point that:
-1. Reads tool output via `window.openai.toolOutput`
-2. Triggers follow-up tools via `window.openai.callTool()`
-3. Persists UI state via `window.openai.setWidgetState()`
+Each tool is **self-contained** in a single file with:
+- Schema (name, description, inputSchema)
+- TypeScript types (input/output interfaces)  
+- Handler function
+
+```typescript
+// server/src/tools/setup-board.ts
+
+// Schema for MCP registration
+export const setupBoardSchema = {
+  name: "setup_board",
+  description: "Create the user's first board...",
+  inputSchema: { ... }
+};
+
+// Types
+export interface SetupBoardInput { ... }
+export interface SetupBoardOutput { ... }
+
+// Handler
+export async function handleSetupBoard(input: SetupBoardInput): Promise<...> {
+  // Implementation
+}
+```
+
+### Widget Architecture
+
+The widget uses a **unified pattern** where one React component handles all steps:
+
+1. **Initialize**: Read `toolOutput` from `window.openai` via hook
+2. **Render**: Show form/UI based on `currentStep`
+3. **User Action**: Call `window.openai.callTool()` with next tool
+4. **Update**: Update React state with response, re-render next step
 
 ```tsx
-import { useOpenAiGlobal } from '../../hooks/use-openai-global';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
-
-function MyWidget() {
+function CielloOnboarding() {
   const toolOutput = useOpenAiGlobal('toolOutput');
-  
-  const handleAction = async () => {
-    await window.openai.callTool('next_tool', { args });
+  const [state, setState] = useState(() => ({
+    step: toolOutput?.currentStep ?? "started",
+    board: toolOutput?.board ?? null,
+    // ...
+  }));
+
+  const handleSubmit = async () => {
+    const response = await window.openai.callTool("setup_board", { ... });
+    setState(prev => ({
+      ...prev,
+      step: response.structuredContent.currentStep,
+      board: response.structuredContent.board,
+    }));
   };
-  
-  return (
-    <div>
-      {/* render tool output */}
-      <Button onClick={handleAction}>Next Step</Button>
-    </div>
-  );
+
+  // Render based on state.step
 }
 ```
 

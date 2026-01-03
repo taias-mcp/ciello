@@ -1,18 +1,79 @@
-// Tool: create_first_task
-// Adds the first task to the user's board
+/**
+ * Tool: create_first_task
+ * 
+ * Adds the first task to the user's board.
+ * If no title is provided, a helpful placeholder task is created.
+ * 
+ * Flow: start_onboarding → setup_board → create_first_task → expand_board → finish_setup
+ */
 
 import { supabase } from "../lib/supabase.js";
-import type { CreateFirstTaskInput, CreateFirstTaskOutput, MCPToolResponse } from "../lib/types.js";
+import type { OnboardingStep, TaskStatus, ToolError, MCPToolResponse } from "../lib/types.js";
 
-// Singleton ID for onboarding state - must match start-onboarding.ts
+// ============================================================================
+// Tool Schema (for MCP registration)
+// ============================================================================
+
+export const createFirstTaskSchema = {
+  name: "create_first_task",
+  description:
+    "Add the first task to the user's board. If no title is provided, a helpful placeholder task will be created automatically.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      task_title: {
+        type: "string",
+        description: "Title for the first task. If omitted, a default task will be created."
+      }
+    },
+    required: []
+  }
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Input parameters from ChatGPT */
+export interface CreateFirstTaskInput {
+  task_title?: string;
+}
+
+/** Output returned to ChatGPT and the widget */
+export interface CreateFirstTaskOutput {
+  message: string;
+  currentStep: OnboardingStep;
+  board: {
+    id: string;
+    name: string;
+  };
+  tasks: Array<{
+    id: string;
+    title: string;
+    status: TaskStatus;
+  }>;
+  error?: ToolError;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Singleton ID for onboarding state - must match start-onboarding.ts */
 const ONBOARDING_STATE_ID = "11111111-1111-1111-1111-111111111111";
 
-// Default task title if none provided
+/** Default task title if none provided */
 const DEFAULT_TASK_TITLE = "Review onboarding guide";
+
+// ============================================================================
+// Handler
+// ============================================================================
 
 /**
  * Handle create_first_task tool call
- * Creates the first task on the board
+ * 
+ * Creates the first task on the board.
  */
 export async function handleCreateFirstTask(input: CreateFirstTaskInput): Promise<MCPToolResponse<CreateFirstTaskOutput>> {
   const taskTitle = input.task_title?.trim() || DEFAULT_TASK_TITLE;

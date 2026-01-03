@@ -1,16 +1,59 @@
-// Tool: start_onboarding
-// Resets the onboarding state and starts fresh
+/**
+ * Tool: start_onboarding
+ * 
+ * Resets the onboarding state and starts a fresh session.
+ * This is the entry point for the Ciello onboarding flow.
+ * 
+ * Flow: start_onboarding → setup_board → create_first_task → expand_board → finish_setup
+ */
 
 import { supabase } from "../lib/supabase.js";
-import type { StartOnboardingOutput, MCPToolResponse } from "../lib/types.js";
+import type { OnboardingStep, ToolError, MCPToolResponse } from "../lib/types.js";
 
-// Singleton ID for onboarding state - ensures idempotency on retries
+// ============================================================================
+// Tool Schema (for MCP registration)
+// ============================================================================
+
+export const startOnboardingSchema = {
+  name: "start_onboarding",
+  description:
+    "Start the Ciello onboarding flow. Creates a fresh session and prepares the user to set up their first board. This resets any existing onboarding progress.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {},
+    required: []
+  }
+} as const;
+
+// ============================================================================
+// Types
+// ============================================================================
+
+/** Output returned to ChatGPT and the widget */
+export interface StartOnboardingOutput {
+  message: string;
+  currentStep: OnboardingStep;
+  startedAt: string;
+  error?: ToolError;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Singleton ID for onboarding state - ensures idempotency on retries */
 const ONBOARDING_STATE_ID = "11111111-1111-1111-1111-111111111111";
+
+// ============================================================================
+// Handler
+// ============================================================================
 
 /**
  * Handle start_onboarding tool call
- * Clears all existing data and creates/resets the onboarding state
- * Uses singleton pattern to handle duplicate/retry calls safely
+ * 
+ * Clears all existing data and creates/resets the onboarding state.
+ * Uses singleton pattern to handle duplicate/retry calls safely.
  */
 export async function handleStartOnboarding(): Promise<MCPToolResponse<StartOnboardingOutput>> {
   console.log("[start_onboarding] Starting onboarding flow...");

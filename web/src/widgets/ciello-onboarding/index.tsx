@@ -1,3 +1,48 @@
+/**
+ * Ciello Onboarding Widget
+ * 
+ * A unified widget that handles the entire onboarding flow for the Ciello
+ * task board application. This single widget manages all 5 steps of onboarding
+ * rather than having separate widgets for each step.
+ * 
+ * ## How It Works
+ * 
+ * 1. **Initial Render**: When ChatGPT calls any of the 5 onboarding tools, the MCP
+ *    server returns a response with `_meta.openai/outputTemplate` pointing to this
+ *    widget. ChatGPT then renders this widget and passes the tool's `structuredContent`
+ *    to `window.openai.toolOutput`.
+ * 
+ * 2. **State Initialization**: The widget reads `toolOutput` via the `useOpenAiGlobal`
+ *    hook and initializes its internal React state with the current step, board data,
+ *    tasks, and invite info.
+ * 
+ * 3. **User Interaction**: When the user fills out forms and clicks the CTA button,
+ *    the widget calls `window.openai.callTool()` with the appropriate tool and params.
+ * 
+ * 4. **State Update**: Unlike navigating to a new widget, `callTool()` returns the
+ *    response directly to this widget. The widget then updates its own React state
+ *    with the new data, re-rendering to show the next step.
+ * 
+ * ## Step Flow
+ * 
+ *   started → board_created → first_task → expanded → complete
+ *     ↓            ↓              ↓            ↓          ↓
+ *   Form:       Form:          Form:        Form:      Summary
+ *   Board       Task           Tasks +      (none)     + Board
+ *   Name/       Title          Invite                  Preview
+ *   Purpose
+ * 
+ * ## Key Data Structures
+ * 
+ * - `toolOutput.currentStep`: Determines which form/UI to show
+ * - `toolOutput.board`: Board info (name, purpose, id)
+ * - `toolOutput.tasks`: Array of tasks on the board
+ * - `toolOutput.invite`: Invited teammate (if any)
+ * 
+ * @see /server/src/tools/ for the MCP tool implementations
+ * @see /server/src/server.ts for widget ↔ tool binding via _meta
+ */
+
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import { useOpenAiGlobal } from "../../hooks/use-openai-global";
