@@ -34,7 +34,7 @@ export async function handleCreateFirstTask(input: CreateFirstTaskInput): Promis
           message: "No board found",
           currentStep: "started",
           board: { id: "", name: "" },
-          task: { id: "", title: "", status: "todo" },
+          tasks: [],
           error: {
             code: "NO_BOARD",
             message: "No board exists. Create a board first.",
@@ -66,7 +66,7 @@ export async function handleCreateFirstTask(input: CreateFirstTaskInput): Promis
           message: "Failed to create task",
           currentStep: "board_created",
           board: { id: board.id, name: board.name },
-          task: { id: "", title: "", status: "todo" },
+          tasks: [],
           error: {
             code: "TASK_CREATE_FAILED",
             message: taskError.message,
@@ -99,11 +99,11 @@ export async function handleCreateFirstTask(input: CreateFirstTaskInput): Promis
           id: board.id,
           name: board.name
         },
-        task: {
+        tasks: [{
           id: task.id,
           title: task.title,
           status: task.status
-        }
+        }]
       }
     };
   } catch (err) {
@@ -115,7 +115,7 @@ export async function handleCreateFirstTask(input: CreateFirstTaskInput): Promis
         message: "Failed to create task",
         currentStep: "board_created",
         board: { id: "", name: "" },
-        task: { id: "", title: "", status: "todo" },
+        tasks: [],
         error: {
           code: "UNEXPECTED_ERROR",
           message,

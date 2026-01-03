@@ -111,11 +111,11 @@ export interface CreateFirstTaskOutput {
     id: string;
     name: string;
   };
-  task: {
+  tasks: Array<{
     id: string;
     title: string;
     status: TaskStatus;
-  };
+  }>;
   error?: ToolError;
 }
 

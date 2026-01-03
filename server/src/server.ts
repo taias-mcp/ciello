@@ -31,44 +31,35 @@ import type {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Widget configuration - 5 widgets matching 5 onboarding tools
-const WIDGETS = [
-  {
-    name: "ciello-start",
-    tool: "start_onboarding",
+// Unified widget configuration - single widget handles all onboarding steps
+const UNIFIED_WIDGET = {
+  name: "ciello-onboarding",
+  uri: "ui://widget/ciello-onboarding.html",
+} as const;
+
+// Tool-specific invocation messages (shown during tool execution)
+const TOOL_MESSAGES: Record<string, { invoking: string; invoked: string }> = {
+  start_onboarding: {
     invoking: "Starting onboarding...",
     invoked: "Ready to begin!",
   },
-  {
-    name: "ciello-board",
-    tool: "setup_board",
+  setup_board: {
     invoking: "Creating board...",
     invoked: "Board created!",
   },
-  {
-    name: "ciello-task",
-    tool: "create_first_task",
+  create_first_task: {
     invoking: "Adding task...",
     invoked: "Task added!",
   },
-  {
-    name: "ciello-expand",
-    tool: "expand_board",
+  expand_board: {
     invoking: "Expanding board...",
     invoked: "Board expanded!",
   },
-  {
-    name: "ciello-complete",
-    tool: "finish_setup",
+  finish_setup: {
     invoking: "Finishing setup...",
     invoked: "Setup complete!",
   },
-] as const;
-
-// Map tool names to widget config
-const TOOL_TO_WIDGET = new Map<string, typeof WIDGETS[number]>(
-  WIDGETS.map(w => [w.tool, w])
-);
+};
 
 // Path to widget assets
 const ASSETS_PATH = resolve(__dirname, "../../web/assets");
@@ -93,14 +84,15 @@ function getWidgetHtml(widgetName: string): string {
 }
 
 // Helper to create tool metadata for ChatGPT widget integration
+// All tools use the same unified widget
 function createToolMeta(toolName: string) {
-  const widget = TOOL_TO_WIDGET.get(toolName);
-  if (!widget) return {};
+  const messages = TOOL_MESSAGES[toolName];
+  if (!messages) return {};
   
   return {
-    "openai/outputTemplate": `ui://widget/${widget.name}.html`,
-    "openai/toolInvocation/invoking": widget.invoking,
-    "openai/toolInvocation/invoked": widget.invoked,
+    "openai/outputTemplate": UNIFIED_WIDGET.uri,
+    "openai/toolInvocation/invoking": messages.invoking,
+    "openai/toolInvocation/invoked": messages.invoked,
     "openai/widgetAccessible": true,
   };
 }
@@ -120,21 +112,21 @@ export function createServer(): Server {
   );
 
   // =========================================================================
-  // List Resources (Widget HTML files)
+  // List Resources (Single unified widget)
   // =========================================================================
   server.setRequestHandler(ListResourcesRequestSchema, async () => {
     return {
-      resources: WIDGETS.map(widget => ({
-        name: widget.name,
-        uri: `ui://widget/${widget.name}.html`,
-        description: `Ciello widget for ${widget.tool}`,
+      resources: [{
+        name: UNIFIED_WIDGET.name,
+        uri: UNIFIED_WIDGET.uri,
+        description: "Ciello onboarding widget - handles all onboarding steps",
         mimeType: "text/html+skybridge"
-      }))
+      }]
     };
   });
 
   // =========================================================================
-  // Read Resource (Serve widget HTML)
+  // Read Resource (Serve unified widget HTML)
   // =========================================================================
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const { uri } = request.params;
@@ -146,9 +138,9 @@ export function createServer(): Server {
     }
     
     const widgetName = match[1];
-    const widget = WIDGETS.find(w => w.name === widgetName);
     
-    if (!widget) {
+    // Only serve the unified widget
+    if (widgetName !== UNIFIED_WIDGET.name) {
       throw new Error(`Unknown widget: ${widgetName}`);
     }
     
@@ -223,7 +215,7 @@ export function createServer(): Server {
     }
   });
 
-  console.log(`[Server] Registered ${WIDGETS.length} widget resources and ${allToolSchemas.length} tools`);
+  console.log(`[Server] Registered unified widget and ${allToolSchemas.length} tools`);
 
   return server;
 }

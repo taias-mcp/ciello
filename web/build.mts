@@ -13,12 +13,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Single unified widget handles all onboarding steps
 const WIDGETS = [
-  'ciello-start',
-  'ciello-board',
-  'ciello-task',
-  'ciello-expand',
-  'ciello-complete',
+  'ciello-onboarding',
 ];
 
 async function buildWidgets() {
